@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Setup {{ project_name }} - Housing Assistant{% endblock %}
+
+{% block head %}
+<style>
+    .chat-message {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 0.75rem;
+        max-width: 70%;
+        line-height: 1.5;
+        word-wrap: break-word;
+    }
+    
+    .user-message {
+        background-color: #d1e7ff;
+        margin-left: auto;
+        color: #1a3c6e;
+    }
+    
+    .assistant-message {
+        background-color: #f5f5f5;
+        margin-right: auto;
+        color: #333;
+    }
+    
+    #chat-container {
+        height: 500px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+        background-color: #fff;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    #chat-form {
+        display: flex;
+        margin-top: 1rem;
+    }
+    
+    #message-input {
+        flex-grow: 1;
+        padding: 0.75rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem 0 0 0.375rem;
+        outline: none;
+    }
+    
+    #message-input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    #chat-form button {
+        padding: 0.75rem 1.5rem;
+        background-color: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 0 0.375rem 0.375rem 0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    #chat-form button:hover {
+        background-color: #1d4ed8;
+    }
+    
+    .action-button {
+        padding: 0.75rem 1.5rem;
+        margin-left: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    #outer-area-button {
+        background-color: #10b981;
+        color: white;
+        border: none;
+    }
+    
+    #outer-area-button:hover {
+        background-color: #059669;
+    }
+    
+    #finalize-button {
+        background-color: #f59e0b;
+        color: white;
+        border: none;
+    }
+    
+    #finalize-button:hover {
+        background-color: #d97706;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold">Setup {{ project_name }}</h1>
+            <p class="text-gray-600">Let’s design your dream house!</p>
+        </div>
+        <a href="/dashboard" class="text-blue-600 hover:underline">Back to Dashboard</a>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="md:col-span-3">
+        <div class="bg-white rounded shadow-md">
+            <div id="chat-container">
+                {% for message in chat_history %}
+                <div class="chat-message {% if message[1] == 'user' %}user-message{% else %}assistant-message{% endif %}" data-markdown="{{ message[2]|e }}">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="flex p-4">
+                <form id="chat-form" class="flex flex-grow">
+                    <input type="text" id="message-input" placeholder="Type your message..." required
+                           class="flex-grow">
+                    <button type="submit">Send</button>
+                </form>
+                <button id="outer-area-button" class="action-button">Outer Area</button>
+                <button id="finalize-button" class="action-button">Finalize</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="md:col-span-1">
+        <div class="bg-white rounded shadow-md p-6">
+            <h3 class="font-bold text-lg mb-4">House Details</h3>
+            
+            {% if house_details %}
+            <ul class="list-disc pl-4">
+                {% for detail in house_details %}
+                <li class="mb-2">
+                    <span class="font-medium">{{ detail[0]|replace('_', ' ')|title }}:</span> 
+                    {{ detail[1] }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-gray-600">No details collected yet.</p>
+            {% endif %}
+            
+            <h3 class="font-bold text-lg mt-6 mb-4">Outer Areas</h3>
+            
+            {% if outer_areas %}
+            <ul class="list-disc pl-4">
+                {% for area in outer_areas %}
+                <li class="mb-2">
+                    <span class="font-medium">{{ area[0]|title }}:</span> 
+                    {{ area[1] }}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-gray-600">No outer areas specified yet.</p>
+            {% endif %}
+            
+            <h3 class="font-bold text-lg mt-6 mb-4">Rooms</h3>
+            
+            {% if rooms %}
+            <ul class="list-disc pl-4">
+                {% for room in rooms %}
+                <li class="mb-2">{{ room }}</li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-gray-600">No rooms specified yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
+
+    function renderMarkdown(element) {
+        const markdownText = element.getAttribute('data-markdown');
+        element.innerHTML = marked.parse(markdownText);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatContainer = document.getElementById('chat-container');
+        const messages = chatContainer.querySelectorAll('.chat-message');
+        messages.forEach(renderMarkdown);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const outerAreaButton = document.getElementById('outer-area-button');
+        const finalizeButton = document.getElementById('finalize-button');
+        
+        chatForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            addMessageToChat('user', message);
+            
+            messageInput.value = '';
+            
+            addMessageToChat('assistant', 'Thinking...', 'loading-message');
+            
+            sendMessage(message);
+        });
+        
+        outerAreaButton.addEventListener('click', function() {
+            addMessageToChat('assistant', 'Asking about outer areas...', 'loading-message');
+            sendMessage('', 'outer_area');
+        });
+        
+        finalizeButton.addEventListener('click', function() {
+            addMessageToChat('assistant', 'Finalizing setup...', 'loading-message');
+            sendMessage('', 'finalize');
+        });
+        
+        function sendMessage(message, action = null) {
+            fetch(`/api/project/{{ project_id }}/setup-chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: message, action: action })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const loadingMsg = document.querySelector('.loading-message');
+                if (loadingMsg) loadingMsg.remove();
+                
+                addMessageToChat('assistant', data.message);
+                
+                if (data.message.includes('Are you good with these rooms') || data.message.includes('Updated rooms')) {
+                    chatForm.removeEventListener('submit', chatForm.onsubmit);
+                    chatForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const message = messageInput.value.trim();
+                        if (!message) return;
+                        addMessageToChat('user', message);
+                        messageInput.value = '';
+                        addMessageToChat('assistant', 'Processing...', 'loading-message');
+                        fetch(`/api/project/{{ project_id }}/confirm-rooms`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ message: message })
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            const loadingMsg = document.querySelector('.loading-message');
+                            if (loadingMsg) loadingMsg.remove();
+                            addMessageToChat('assistant', data.message);
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1000);
+                        });
+                    });
+                }
+                
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const loadingMsg = document.querySelector('.loading-message');
+                if (loadingMsg) loadingMsg.remove();
+                addMessageToChat('assistant', 'Sorry, something went wrong. Please try again.');
+            });
+        }
+        
+        function addMessageToChat(sender, message, className = '') {
+            const chatContainer = document.getElementById('chat-container');
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender === 'user' ? 'user-message' : 'assistant-message'} ${className}`;
+            messageDiv.setAttribute('data-markdown', message);
+            renderMarkdown(messageDiv);
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    });
+</script>
+{% endblock %}

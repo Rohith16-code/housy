@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project_name }} - Housing Assistant{% endblock %}
+
+{% block head %}
+<style>
+    .room-tab {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.25rem;
+        margin-right: 0.5rem;
+        transition: background-color 0.2s;
+    }
+    
+    .room-tab.active {
+        background-color: #2563eb;
+        color: white;
+        border-color: #2563eb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold">{{ project_name }}</h1>
+        </div>
+        <a href="/dashboard" class="text-blue-600 hover:underline">Back to Dashboard</a>
+    </div>
+</div>
+
+{% if rooms %}
+<h2 class="text-2xl font-semibold mb-4">Rooms</h2>
+<div class="flex flex-wrap gap-2 mb-6">
+    {% for room in rooms %}
+    <a href="/room/{{ room[0] }}/chat" class="room-tab">{{ room[1] }}</a>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-gray-600 mb-6">No rooms confirmed yet. <a href="/project/{{ project_id }}/setup" class="text-blue-600 hover:underline">Complete the setup</a>.</p>
+{% endif %}
+
+<div>
+    <a href="/api/project/{{ project_id }}/report" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        Generate Report
+    </a>
+</div>
+
+{% endblock %}

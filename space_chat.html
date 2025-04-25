@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Design {{ space_name }} - {{ project_name }}{% endblock %}
+
+{% block head %}
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f7fafc;
+    }
+    .chat-container {
+        max-width: 800px;
+        margin: 0 auto;
+        border: 1px solid #e2e8f0;
+        padding: 15px;
+        background-color: #fff;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .message {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 0.5rem;
+        line-height: 1.5;
+    }
+    .user {
+        background-color: #d1e7ff;
+        margin-left: 20%;
+        color: #1a3c6e;
+    }
+    .assistant {
+        background-color: #f5f5f5;
+        margin-right: 20%;
+        color: #333;
+    }
+    .space-details {
+        margin: 15px 0;
+        padding: 10px;
+        background-color: #edf2f7;
+        border-radius: 0.5rem;
+    }
+    .space-list {
+        margin: 15px 0;
+    }
+    .space-list a {
+        margin-right: 10px;
+        color: #2563eb;
+        text-decoration: none;
+    }
+    .space-list a:hover {
+        text-decoration: underline;
+    }
+    textarea {
+        width: 100%;
+        height: 100px;
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        resize: vertical;
+    }
+    button {
+        margin-top: 10px;
+        padding: 0.75rem 1.5rem;
+        background-color: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    button:hover {
+        background-color: #1d4ed8;
+    }
+    .progress-container {
+        margin: 15px 0;
+    }
+    .progress-bar {
+        width: 100%;
+        background-color: #e2e8f0;
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 20px;
+        background-color: #10b981;
+        transition: width 0.3s ease-in-out;
+    }
+    .progress-text {
+        margin-top: 5px;
+        font-size: 0.9rem;
+        color: #4a5568;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-2xl font-bold">Designing {{ space_name }} (Floor {{ floor_number }}, {{ section_name }}) - {{ project_name }}</h2>
+    <p class="text-gray-600">Let’s make this space amazing! ✨</p>
+</div>
+
+<div class="progress-container">
+    <div class="progress-bar">
+        <div class="progress-fill" data-progress="{{ progress }}"></div>
+    </div>
+    <div class="progress-text">{{ specified_items }} of {{ total_items }} items specified ({{ progress|round(1) }}% complete)</div>
+</div>
+
+<div class="chat-container">
+    {% for message_id, sender, message, timestamp in chat_history %}
+    <div class="message {{ 'user' if sender == 'user' else 'assistant' }}">
+        <strong>{{ sender.capitalize() }}:</strong> {{ message|safe }}<br>
+        <small>{{ timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="space-list">
+    <h3 class="font-bold text-lg mb-2">Other Spaces</h3>
+    {% for s_space_id, s_space_name, s_floor_number, s_section_name in all_spaces %}
+    {% if s_space_id != space_id %}
+    <a href="/space/{{ s_space_id }}/chat">{{ s_space_name }} (Floor {{ s_floor_number }}, {{ s_section_name }})</a>
+    {% endif %}
+    {% endfor %}
+</div>
+
+<form id="chat-form">
+    <textarea id="message" name="message" placeholder="Describe your preferences (e.g., 'comfy leather sofa' or 'modern kitchen cabinets')" required></textarea>
+    <button type="submit">Send</button>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Set progress bar width dynamically
+    document.addEventListener('DOMContentLoaded', () => {
+        const progressFill = document.querySelector('.progress-fill');
+        const progressValue = progressFill.getAttribute('data-progress');
+        progressFill.style.width = `${progressValue}%`;
+    });
+
+    document.getElementById('chat-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const message = document.getElementById('message').value.trim();
+        if (!message) return;
+
+        const chatContainer = document.querySelector('.chat-container');
+        const userDiv = document.createElement('div');
+        userDiv.className = 'message user';
+        userDiv.innerHTML = `<strong>User:</strong> ${message}<br><small>${new Date().toLocaleString()}</small>`;
+        chatContainer.appendChild(userDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        document.getElementById('message').value = '';
+
+        const loadingDiv = document.createElement('div');
+        loadingDiv.className = 'message assistant loading-message';
+        loadingDiv.innerHTML = `<strong>Assistant:</strong> Thinking... 😊<br><small>${new Date().toLocaleString()}</small>`;
+        chatContainer.appendChild(loadingDiv);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+
+        try {
+            const response = await fetch(`/api/chat/{{ space_id }}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+            const data = await response.json();
+            const loadingMsg = document.querySelector('.loading-message');
+            if (loadingMsg) loadingMsg.remove();
+
+            if (data.message) {
+                const assistantDiv = document.createElement('div');
+                assistantDiv.className = 'message assistant';
+                assistantDiv.innerHTML = `<strong>Assistant:</strong> ${marked.parse(data.message)}<br><small>${new Date().toLocaleString()}</small>`;
+                chatContainer.appendChild(assistantDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                if (data.message.includes('Want to move to another room') || data.message.includes('shall we wrap up')) {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            const loadingMsg = document.querySelector('.loading-message');
+            if (loadingMsg) loadingMsg.remove();
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message assistant';
+            errorDiv.innerHTML = `<strong>Assistant:</strong> Oops, something went wrong! Let’s try again. 😅<br><small>${new Date().toLocaleString()}</small>`;
+            chatContainer.appendChild(errorDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    });
+</script>
+{% endblock %}

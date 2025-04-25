@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Room Chat - {{ project_name }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .chat-container { max-width: 800px; margin: 0 auto; border: 1px solid #ccc; padding: 10px; }
+        .message { margin: 10px 0; padding: 5px; border-radius: 5px; }
+        .user { background-color: #e0f7fa; text-align: right; }
+        .assistant { background-color: #f0f0f0; }
+        .room-details { margin: 10px 0; }
+        .room-list { margin: 10px 0; }
+        .room-list a { margin-right: 10px; }
+        textarea { width: 100%; height: 100px; margin-top: 10px; }
+        button { margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Designing {{ room_name }} (Floor {{ floor_number }}) - {{ project_name }}</h2>
+    <div class="chat-container">
+        {% for message_id, sender, message, timestamp in chat_history %}
+            <div class="message {{ 'user' if sender == 'user' else 'assistant' }}">
+                <strong>{{ sender.capitalize() }}:</strong> {{ message }}<br>
+                <small>{{ timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="room-details">
+        <h3>Room Details:</h3>
+        <ul>
+            {% for detail_type, detail_value in room_details %}
+                <li>{{ detail_type }}: {{ detail_value }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="room-list">
+        <h3>Other Rooms:</h3>
+        {% for r_room_id, r_room_name, r_floor_number in all_rooms %}
+            {% if r_room_id != room_id %}
+                <a href="{{ url_for('room_chat', room_id=r_room_id) }}">{{ r_room_name }} (Floor {{ r_floor_number }})</a>
+            {% endif %}
+        {% endfor %}
+    </div>
+    <form id="chat-form">
+        <textarea id="message" name="message" placeholder="Type your message..." required></textarea>
+        <button type="submit">Send</button>
+    </form>
+    <script>
+        document.getElementById('chat-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = document.getElementById('message').value;
+            const response = await fetch(`/api/chat/{{ room_id }}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message })
+            });
+            const data = await response.json();
+            if (data.message) {
+                const chatContainer = document.querySelector('.chat-container');
+                const div = document.createElement('div');
+                div.className = 'message assistant';
+                div.innerHTML = `<strong>Assistant:</strong> ${data.message}<br><small>${new Date().toLocaleString()}</small>`;
+                chatContainer.appendChild(div);
+            }
+            document.getElementById('message').value = '';
+        });
+    </script>
+</body>
+</html>
